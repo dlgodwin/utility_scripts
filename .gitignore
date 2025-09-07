@@ -1,0 +1,60 @@
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# macOS Finder and metadata
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.com.apple.timemachine.donotpresent
+.VolumeIcon.icns
+
+# Thumbnails and cache
+*.bak
+*.tmp
+*.swp
+*.swo
+*.swn
+*.lock
+
+# Logs and system cache
+*.log
+
+# Backup files
+*~
+*.old
+*.orig
+
+# Vim/Neovim swap and backup files
+*.un~
+*.sw?
+
+# VS Code folders
+.vscode/
+
+# Obsidian-specific folders (if stored here)
+.obsidian/
+.trash/
+
+# JetBrains IDEs
+.idea/
+
+# Node/npm (in case you use shell tools that depend on them)
+node_modules/
+npm-debug.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+
+# Homebrew Caches
+~/Library/Caches/Homebrew/
+
+# Others — customize for tools you use
+.env
+*.env
