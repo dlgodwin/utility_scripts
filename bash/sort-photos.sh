@@ -3,6 +3,9 @@
 # Sort photos and videos into:
 # Destination/YYYY/YYYY-MM/
 #
+# This script copies media files only.
+# Apple .AAE sidecar files are intentionally ignored.
+#
 # Usage:
 #   ./sort-photos.sh "/path/to/source" "/path/to/destination"
 
@@ -31,6 +34,17 @@ fi
 
 mkdir -p "$DESTINATION"
 
+SOURCE="$(cd "$SOURCE" && pwd -P)"
+DESTINATION="$(cd "$DESTINATION" && pwd -P)"
+
+# Prevent recursive copying if the destination is inside the source.
+case "$DESTINATION/" in
+    "$SOURCE/"*)
+        echo "Error: Destination cannot be inside the source folder."
+        exit 1
+        ;;
+esac
+
 copied=0
 skipped=0
 failed=0
@@ -38,29 +52,32 @@ failed=0
 copy_with_unique_name() {
     local source_file="$1"
     local target_directory="$2"
+
     local filename
-    local basename
+    local basename_without_extension
     local extension
+    local target_base
     local target
     local counter
 
     filename="$(basename "$source_file")"
 
-    # Separate filename and extension.
     if [[ "$filename" == *.* ]]; then
-        basename="${filename%.*}"
+        basename_without_extension="${filename%.*}"
         extension=".${filename##*.}"
     else
-        basename="$filename"
+        basename_without_extension="$filename"
         extension=""
     fi
 
-    target="$target_directory/$filename"
+    target_base="$basename_without_extension"
+    target="$target_directory/${target_base}${extension}"
     counter=1
 
-    # If a file with the same name exists, add a numeric suffix.
+    # Avoid overwriting an existing file with the same name.
     while [ -e "$target" ]; do
-        target="$target_directory/${basename}_$counter${extension}"
+        target_base="${basename_without_extension}_$counter"
+        target="$target_directory/${target_base}${extension}"
         counter=$((counter + 1))
     done
 
@@ -78,28 +95,34 @@ while IFS= read -r -d '' file; do
     relative_date=""
 
     # Prefer the original camera capture date.
-    relative_date="$(exiftool \
-        -s3 \
-        -d "%Y/%Y-%m" \
-        -DateTimeOriginal \
-        "$file" 2>/dev/null)"
-
-    # Fall back to media creation date.
-    if [ -z "$relative_date" ]; then
-        relative_date="$(exiftool \
+    relative_date="$(
+        exiftool \
             -s3 \
             -d "%Y/%Y-%m" \
-            -CreateDate \
-            "$file" 2>/dev/null)"
+            -DateTimeOriginal \
+            "$file" 2>/dev/null
+    )"
+
+    # Fall back to embedded creation date.
+    if [ -z "$relative_date" ]; then
+        relative_date="$(
+            exiftool \
+                -s3 \
+                -d "%Y/%Y-%m" \
+                -CreateDate \
+                "$file" 2>/dev/null
+        )"
     fi
 
-    # Fall back to the file's modification date.
+    # Fall back to filesystem modification date.
     if [ -z "$relative_date" ]; then
-        relative_date="$(exiftool \
-            -s3 \
-            -d "%Y/%Y-%m" \
-            -FileModifyDate \
-            "$file" 2>/dev/null)"
+        relative_date="$(
+            exiftool \
+                -s3 \
+                -d "%Y/%Y-%m" \
+                -FileModifyDate \
+                "$file" 2>/dev/null
+        )"
     fi
 
     if [ -z "$relative_date" ]; then
@@ -138,6 +161,6 @@ done < <(
 
 echo
 echo "Finished."
-echo "Copied: $copied"
+echo "Media copied: $copied"
 echo "Skipped: $skipped"
 echo "Failed: $failed"
